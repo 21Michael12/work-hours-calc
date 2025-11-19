@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון שעות עבודה</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .setup-instructions {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(240, 147, 251, 0.3);
+        }
+
+        .setup-instructions h2 {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .setup-instructions ol {
+            margin: 15px 0 15px 25px;
+            line-height: 1.8;
+        }
+
+        .setup-instructions li {
+            margin-bottom: 10px;
+        }
+
+        .setup-instructions code {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .setup-instructions a {
+            color: #fff;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .setup-instructions .highlight {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-right: 4px solid white;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .config-section textarea {
+            width: 100%;
+            height: 200px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .config-section button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .config-section button:hover {
+            background: #218838;
+        }
+
+        .month-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .month-selector label {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .month-selector select {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .month-selector select:hover {
+            border-color: #764ba2;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-clear {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .shifts-table {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: right;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-item h3 {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .summary-item p {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.2em;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        .status-connected {
+            background: #28a745;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+
+            .summary {
+                grid-template-columns: 1fr;
+            }
+
+            .setup-instructions {
+                font-size: 0.9em;
+            }
+        }
+
+        #app {
+            display: none;
+        }
+
+        #app.ready {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ מחשבון שעות עבודה</h1>
+        
+        <!-- Setup Instructions (will hide after configuration) -->
+        <div class="setup-instructions" id="setupInstructions">
+            <h2>🚀 ברוך הבא! קודם כל נגדיר את Firebase</h2>
+            <ol>
+                <li>היכנס ל-<a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+                <li>לחץ על "Add project" (או "הוסף פרויקט")</li>
+                <li>תן שם לפרויקט ולחץ "Continue" עד שהפרויקט נוצר</li>
+                <li>בצד שמאל, לחץ על "Build" ← "Realtime Database"</li>
+                <li>לחץ "Create Database" ← בחר מיקום ← בחר <strong>"Start in test mode"</strong></li>
+                <li>עכשיו לחץ על ⚙️ (הגדרות) ← "Project settings"</li>
+                <li>גלול למטה ← לחץ על האייקון <code>&lt;/&gt;</code> (Web)</li>
+                <li>תן שם לאפליקציה ולחץ "Register app"</li>
+                <li>תראה קוד עם <code>firebaseConfig</code> - <strong>העתק אותו והדבק למטה:</strong></li>
+            </ol>
+            
+            <div class="config-section">
+                <h3>📋 הדבק כאן את ה-firebaseConfig מ-Firebase:</h3>
+                <textarea id="configInput" placeholder='const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};'></textarea>
+                <button onclick="applyConfig()">✅ שמור והפעל את המחשבון</button>
+                <p style="color: #856404; margin-top: 10px; font-size: 14px;">
+                    💡 טיפ: אחרי שתשמור, רענן את הדף והמחשבון יעבוד אוטומטית!
+                </p>
+            </div>
+        </div>
+
+        <div id="app">
+            <div class="month-selector">
+                <label for="monthSelect">בחר חודש:</label>
+                <select id="monthSelect">
+                    <option value="2025-01">ינואר 2025</option>
+                    <option value="2025-02">פברואר 2025</option>
+                    <option value="2025-03">מרץ 2025</option>
+                    <option value="2025-04">אפריל 2025</option>
+                    <option value="2025-05">מאי 2025</option>
+                    <option value="2025-06">יוני 2025</option>
+                    <option value="2025-07">יולי 2025</option>
+                    <option value="2025-08">אוגוסט 2025</option>
+                    <option value="2025-09">ספטמבר 2025</option>
+                    <option value="2025-10">אוקטובר 2025</option>
+                    <option value="2025-11">נובמבר 2025</option>
+                    <option value="2025-12">דצמבר 2025</option>
+                </select>
+                <span id="connectionStatus"></span>
+            </div>
+
+            <div class="input-section">
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="date">תאריך:</label>
+                        <input type="text" id="date" placeholder="15112025" pattern="\d{2}/\d{2}/\d{4}" maxlength="10">
+                    </div>
+                    <div class="input-group">
+                        <label for="startTime">שעת התחלה:</label>
+                        <input type="text" id="startTime" value="09:00" placeholder="1530" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5">
+                    </div>
+                    <div class="input-group">
+                        <label for="endTime">שעת סיום:</label>
+                        <input type="text" id="endTime" value="17:00" placeholder="2330" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5">
+                    </div>
+                    <div class="input-group">
+                        <label for="hourlyRate">שכר לשעה (₪):</label>
+                        <input type="number" id="hourlyRate" placeholder="0" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-add" onclick="addShift()">➕ הוסף משמרת</button>
+                    <button class="btn-clear" onclick="clearMonth()">🗑️ נקה חודש</button>
+                </div>
+            </div>
+
+            <div class="shifts-table">
+                <table id="shiftsTable">
+                    <thead>
+                        <tr>
+                            <th>תאריך</th>
+                            <th>שעת התחלה</th>
+                            <th>שעת סיום</th>
+                            <th>שעות עבודה</th>
+                            <th>שכר לשעה</th>
+                            <th>סה"כ הכנסה</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftsBody">
+                        <tr>
+                            <td colspan="7" class="no-data">אין משמרות עדיין. הוסף משמרת כדי להתחיל!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="summary">
+                <div class="summary-item">
+                    <h3>סה"כ שעות</h3>
+                    <p id="totalHours">0.00</p>
+                </div>
+                <div class="summary-item">
+                    <h3>סה"כ משמרות</h3>
+                    <p id="totalShifts">0</p>
+                </div>
+                <div class="summary-item">
+                    <h3>סה"כ הכנסה</h3>
+                    <p id="totalIncome">₪0.00</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // Configuration Management
+        // ============================================
+        function applyConfig() {
+            const configText = document.getElementById('configInput').value;
+            
+            try {
+                // Extract the config object from the pasted text
+                const configMatch = configText.match(/\{[\s\S]*\}/);
+                if (!configMatch) {
+                    alert('לא מצאתי הגדרות תקינות. ודא שהעתקת את כל הקוד של firebaseConfig');
+                    return;
+                }
+                
+                const config = eval('(' + configMatch[0] + ')');
+                
+                // Validate config
+                if (!config.apiKey || !config.databaseURL || !config.projectId) {
+                    alert('ההגדרות לא שלמות. ודא שהעתקת את כל השדות.');
+                    return;
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('firebaseConfig', JSON.stringify(config));
+                
+                alert('✅ ההגדרות נשמרו בהצלחה! רענן את הדף כדי להתחיל להשתמש במחשבון.');
+                location.reload();
+                
+            } catch (error) {
+                alert('שגיאה בהדבקת ההגדרות. ודא שהעתקת נכון את הקוד מ-Firebase.');
+                console.error(error);
+            }
+        }
+
+        // ============================================
+        // Firebase Initialization
+        // ============================================
+        let database;
+        let currentUserId = localStorage.getItem('userId') || 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', currentUserId);
+        
+        // Check if config exists
+        const savedConfig = localStorage.getItem('firebaseConfig');
+        
+        if (savedConfig) {
+            try {
+                const firebaseConfig = JSON.parse(savedConfig);
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                
+                // Hide setup instructions
+                document.getElementById('setupInstructions').style.display = 'none';
+                document.getElementById('app').classList.add('ready');
+                
+                // Show connection status
+                updateConnectionStatus(true);
+                
+                console.log('Firebase initialized successfully');
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                alert('שגיאה באתחול Firebase. בדוק את ההגדרות.');
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.innerHTML = '<span class="status-indicator status-connected"></span>מחובר לענן';
+                status.style.color = '#28a745';
+            } else {
+                status.innerHTML = '<span class="status-indicator status-disconnected"></span>מנותק';
+                status.style.color = '#dc3545';
+            }
+        }
+
+        // ============================================
+        // Data Management Functions
+        // ============================================
+        function loadData(callback) {
+            if (!database) {
+                const savedData = localStorage.getItem('workShifts');
+                const data = savedData ? JSON.parse(savedData) : {};
+                if (callback) callback(data);
+                return;
+            }
+            
+            database.ref('users/' + currentUserId + '/shifts').once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val() || {};
+                    if (callback) callback(data);
+                })
+                .catch((error) => {
+                    console.error('Error loading data:', error);
+                    const savedData = localStorage.getItem('workShifts');
+                    const data = savedData ? JSON.parse(savedData) : {};
+                    if (callback) callback(data);
+                });
+        }
+
+        function saveData(data, callback) {
+            if (!database) {
+                localStorage.setItem('workShifts', JSON.stringify(data));
+                if (callback) callback();
+                return;
+            }
+            
+            database.ref('users/' + currentUserId + '/shifts').set(data)
+                .then(() => {
+                    console.log('Data saved to Firebase');
+                    if (callback) callback();
+                })
+                .catch((error) => {
+                    console.error('Error saving data:', error);
+                    localStorage.setItem('workShifts', JSON.stringify(data));
+                    if (callback) callback();
+                });
+        }
+
+        // Set current month
+        if (savedConfig) {
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('monthSelect').value = currentMonth;
+            
+            // Set today's date in DD/MM/YYYY format
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            document.getElementById('date').value = `${dd}/${mm}/${yyyy}`;
+        }
+
+        function getCurrentMonth() {
+            return document.getElementById('monthSelect').value;
+        }
+
+        function calculateHours(start, end) {
+            const [startHour, startMin] = start.split(':').map(Number);
+            const [endHour, endMin] = end.split(':').map(Number);
+            
+            let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+            
+            if (totalMinutes < 0) {
+                totalMinutes += 24 * 60;
+            }
+            
+            return (totalMinutes / 60).toFixed(2);
+        }
+
+        function validateDate(dateStr) {
+            const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dateStr.match(dateRegex);
+            
+            if (!match) return null;
+            
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+            
+            if (month < 1 || month > 12) return null;
+            if (day < 1 || day > 31) return null;
+            if (year < 1900 || year > 2100) return null;
+            
+            const date = new Date(year, month - 1, day);
+            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        function addShift() {
+            const dateInput = document.getElementById('date').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+
+            if (!dateInput || !startTime || !endTime) {
+                alert('נא למלא את כל השדות!');
+                return;
+            }
+
+            const date = validateDate(dateInput);
+            if (!date) {
+                alert('נא להזין תאריך בפורמט תקין DD/MM/YYYY (לדוגמה: 15/11/2025)');
+                return;
+            }
+
+            const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+                alert('נא להזין שעה בפורמט תקין (לדוגמה: 15:30 או 23:30)');
+                return;
+            }
+
+            const hours = calculateHours(startTime, endTime);
+            const income = (parseFloat(hours) * hourlyRate).toFixed(2);
+
+            const shift = {
+                id: Date.now(),
+                date,
+                dateDisplay: dateInput,
+                startTime,
+                endTime,
+                hours,
+                hourlyRate,
+                income
+            };
+
+            loadData((data) => {
+                const currentMonth = getCurrentMonth();
+                
+                if (!data[currentMonth]) {
+                    data[currentMonth] = [];
+                }
+                
+                data[currentMonth].push(shift);
+                
+                saveData(data, () => {
+                    displayShifts();
+                    document.getElementById('hourlyRate').value = '';
+                });
+            });
+        }
+
+        function deleteShift(id) {
+            if (!confirm('האם למחוק משמרת זו?')) return;
+            
+            loadData((data) => {
+                const currentMonth = getCurrentMonth();
+                
+                if (data[currentMonth]) {
+                    data[currentMonth] = data[currentMonth].filter(shift => shift.id !== id);
+                    if (data[currentMonth].length === 0) {
+                        delete data[currentMonth];
+                    }
+                    saveData(data, () => {
+                        displayShifts();
+                    });
+                }
+            });
+        }
+
+        function clearMonth() {
+            if (!confirm('האם למחוק את כל המשמרות של החודש?')) return;
+            
+            loadData((data) => {
+                const currentMonth = getCurrentMonth();
+                delete data[currentMonth];
+                saveData(data, () => {
+                    displayShifts();
+                });
+            });
+        }
+
+        function displayShifts() {
+            loadData((data) => {
+                const currentMonth = getCurrentMonth();
+                const shifts = data[currentMonth] || [];
+                
+                const tbody = document.getElementById('shiftsBody');
+                
+                if (shifts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="no-data">אין משמרות לחודש זה</td></tr>';
+                    updateSummary(0, 0, 0);
+                    return;
+                }
+                
+                shifts.sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                let totalHours = 0;
+                let totalIncome = 0;
+                
+                tbody.innerHTML = shifts.map(shift => {
+                    totalHours += parseFloat(shift.hours);
+                    totalIncome += parseFloat(shift.income);
+                    
+                    let displayDate = shift.dateDisplay;
+                    if (!displayDate) {
+                        const dateObj = new Date(shift.date + 'T00:00:00');
+                        const dd = String(dateObj.getDate()).padStart(2, '0');
+                        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const yyyy = dateObj.getFullYear();
+                        displayDate = `${dd}/${mm}/${yyyy}`;
+                    }
+                    
+                    return `
+                        <tr>
+                            <td>${displayDate}</td>
+                            <td>${shift.startTime}</td>
+                            <td>${shift.endTime}</td>
+                            <td>${shift.hours}</td>
+                            <td>₪${shift.hourlyRate.toFixed(2)}</td>
+                            <td>₪${shift.income}</td>
+                            <td><button class="delete-btn" onclick="deleteShift(${shift.id})">מחק</button></td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                updateSummary(totalHours, shifts.length, totalIncome);
+            });
+        }
+
+        function updateSummary(hours, shifts, income) {
+            document.getElementById('totalHours').textContent = hours.toFixed(2);
+            document.getElementById('totalShifts').textContent = shifts;
+            document.getElementById('totalIncome').textContent = `₪${income.toFixed(2)}`;
+        }
+
+        // Event listeners
+        if (savedConfig) {
+            document.getElementById('monthSelect').addEventListener('change', displayShifts);
+
+            document.getElementById('date').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length >= 2) {
+                    value = value.slice(0, 2) + '/' + value.slice(2);
+                }
+                if (value.length >= 5) {
+                    value = value.slice(0, 5) + '/' + value.slice(5, 9);
+                }
+                
+                e.target.value = value;
+            });
+
+            ['startTime', 'endTime'].forEach(id => {
+                document.getElementById(id).addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    
+                    if (value.length >= 2) {
+                        value = value.slice(0, 2) + ':' + value.slice(2, 4);
+                    }
+                    
+                    e.target.value = value;
+                });
+            });
+
+            displayShifts();
+        }
+    </script>
+</body>
+</html>
