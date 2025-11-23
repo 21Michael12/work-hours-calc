@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון שעות עבודה</title>
+    
+    <!-- Firebase SDKs v9 (Modular) -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, addDoc, deleteDoc, getDocs, setDoc, query, orderBy, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCs9Frt4b4SzpKx__28Ig48s1kEMBqPsks",
+            authDomain: "work-hours-calc-a4d38.firebaseapp.com",
+            projectId: "work-hours-calc-a4d38",
+            storageBucket: "work-hours-calc-a4d38.firebasestorage.app",
+            messagingSenderId: "993033518392",
+            appId: "1:993033518392:web:b84aed2274cfe3600595cd"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make variables globally accessible
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window.firebaseSignIn = signInWithEmailAndPassword;
+        window.firebaseSignUp = createUserWithEmailAndPassword;
+        window.firebaseSignOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.firestoreCollection = collection;
+        window.firestoreDoc = doc;
+        window.firestoreAddDoc = addDoc;
+        window.firestoreSetDoc = setDoc;
+        window.firestoreDeleteDoc = deleteDoc;
+        window.firestoreGetDocs = getDocs;
+        window.firestoreQuery = query;
+        window.firestoreOrderBy = orderBy;
+        window.firestoreWriteBatch = writeBatch;
+        window.firestoreServerTimestamp = serverTimestamp;
+    </script>
+    
+    <style>
+        :root {
+            /* Light Mode Colors */
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --accent-primary: #0d6efd;
+            --accent-secondary: #0a58ca;
+            --success: #198754;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Mode Colors */
+            --bg-primary: #1a1d23;
+            --bg-secondary: #25282e;
+            --bg-tertiary: #2f3338;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --border-color: #495057;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --accent-primary: #0d6efd;
+            --accent-secondary: #0a58ca;
+            --success: #198754;
+            --danger: #dc3545;
+            --warning: #ffc107;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px var(--shadow);
+            padding: 30px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        /* Login/Signup Screen */
+        .auth-screen {
+            max-width: 450px;
+            margin: 50px auto;
+            padding: 40px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .auth-screen h2 {
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-form input {
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .auth-form input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        .auth-form button {
+            padding: 12px 16px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .auth-form button:hover {
+            background: var(--accent-secondary);
+        }
+
+        .auth-form button.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .auth-form button.secondary:hover {
+            background: var(--border-color);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #d1e7dd;
+            color: #0f5132;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .info-message {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+        }
+
+        .toggle-auth {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .toggle-auth a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .toggle-auth a:hover {
+            text-decoration: underline;
+        }
+
+        /* User Info Bar */
+        .user-info {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info .user-email {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .user-info button {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .user-info button:hover {
+            background: #bb2d3b;
+        }
+
+        /* Month Selector */
+        .month-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .month-selector label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .month-selector select {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .month-selector select:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .month-selector select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        .btn-add-month {
+            padding: 10px 18px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .btn-add-month:hover {
+            background: #157347;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h3 {
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .month-card {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .month-card:hover:not(.disabled) {
+            background: var(--accent-primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+        }
+
+        .month-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .month-card .month-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .month-card .month-year {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .btn-cancel {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: var(--border-color);
+        }
+
+        /* Input Section */
+        .input-section {
+            background: var(--bg-tertiary);
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .input-group input {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-add {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-add:hover {
+            background: var(--accent-secondary);
+        }
+
+        .btn-clear {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #bb2d3b;
+        }
+
+        /* Table */
+        .shifts-table {
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            text-align: right;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: right;
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #bb2d3b;
+        }
+
+        /* Summary Cards */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-card h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-card p {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+
+            .summary {
+                grid-template-columns: 1fr;
+            }
+
+            .month-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .app-header {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="hidden">
+        <div class="auth-screen">
+            <h2>🔐 כניסה למחשבון</h2>
+            <div id="loginError" class="error-message hidden"></div>
+            <div id="loginSuccess" class="success-message hidden"></div>
+            <div class="auth-form">
+                <input type="email" id="loginEmail" placeholder="אימייל" />
+                <input type="password" id="loginPassword" placeholder="סיסמה" />
+                <button onclick="loginUser()">התחבר</button>
+            </div>
+            <div class="toggle-auth">
+                עדיין אין לך חשבון? <a onclick="showSignupScreen()">הירשם כאן</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Screen -->
+    <div id="signupScreen" class="hidden">
+        <div class="auth-screen">
+            <h2>📝 הרשמה למחשבון</h2>
+            <div id="signupError" class="error-message hidden"></div>
+            <div id="signupSuccess" class="success-message hidden"></div>
+            <div class="auth-form">
+                <input type="email" id="signupEmail" placeholder="אימייל" />
+                <input type="password" id="signupPassword" placeholder="סיסמה (לפחות 6 תווים)" />
+                <input type="password" id="signupPasswordConfirm" placeholder="אימות סיסמה" />
+                <button onclick="signupUser()">צור חשבון</button>
+                <button class="secondary" onclick="showLoginScreen()">חזרה לכניסה</button>
+            </div>
+            <div class="info-message">
+                💡 <strong>טיפ:</strong> בחר סיסמה חזקה עם לפחות 6 תווים
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="container hidden">
+        <div class="app-header">
+            <h1>📊 מחשבון שעות עבודה</h1>
+            <div class="theme-toggle">
+                <button class="theme-toggle-btn" onclick="toggleTheme()">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeText">מצב כהה</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="user-info">
+            <span class="user-email">👤 <span id="userEmailDisplay"></span></span>
+            <button onclick="logoutUser()">התנתק</button>
+        </div>
+
+        <div class="month-selector">
+            <label for="monthSelect">בחר חודש:</label>
+            <select id="monthSelect">
+                <option value="">בחר חודש...</option>
+            </select>
+            <button class="btn-add-month" onclick="showAddMonthModal()">➕ הוסף חודש</button>
+        </div>
+
+        <!-- Add Month Modal -->
+        <div id="addMonthModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>➕ הוסף חודש חדש</h3>
+                <div class="month-grid" id="monthGrid">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <button class="btn-cancel" onclick="closeAddMonthModal()">ביטול</button>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="date">תאריך</label>
+                    <input type="text" id="date" placeholder="19112024" maxlength="10">
+                </div>
+                <div class="input-group">
+                    <label for="startTime">שעת התחלה</label>
+                    <input type="text" id="startTime" value="09:00" placeholder="0900" maxlength="5">
+                </div>
+                <div class="input-group">
+                    <label for="endTime">שעת סיום</label>
+                    <input type="text" id="endTime" value="17:00" placeholder="1700" maxlength="5">
+                </div>
+                <div class="input-group">
+                    <label for="hourlyRate">שכר לשעה (₪)</label>
+                    <input type="number" id="hourlyRate" placeholder="0" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="btn-add" onclick="addShift()">➕ הוסף משמרת</button>
+                <button class="btn-clear" onclick="clearMonth()">🗑️ נקה חודש</button>
+            </div>
+        </div>
+
+        <div class="shifts-table">
+            <table id="shiftsTable">
+                <thead>
+                    <tr>
+                        <th>תאריך</th>
+                        <th>שעת התחלה</th>
+                        <th>שעת סיום</th>
+                        <th>שעות עבודה</th>
+                        <th>שכר לשעה</th>
+                        <th>סה"כ הכנסה</th>
+                        <th>פעולות</th>
+                    </tr>
+                </thead>
+                <tbody id="shiftsBody">
+                    <tr>
+                        <td colspan="7" class="loading">בחר חודש או הוסף חודש חדש</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <h3>סה"כ שעות</h3>
+                <p id="totalHours">0.00</p>
+            </div>
+            <div class="summary-card">
+                <h3>סה"כ משמרות</h3>
+                <p id="totalShifts">0</p>
+            </div>
+            <div class="summary-card">
+                <h3>סה"כ הכנסה</h3>
+                <p id="totalIncome">₪0.00</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // Global Variables
+        // ============================================
+        let currentUser = null;
+        let userMonths = [];
+        let savedHourlyRate = localStorage.getItem('hourlyRate') || '';
+
+        // ============================================
+        // Theme Management
+        // ============================================
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButton(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('themeIcon');
+            const text = document.getElementById('themeText');
+            
+            if (theme === 'dark') {
+                icon.textContent = '☀️';
+                text.textContent = 'מצב בהיר';
+            } else {
+                icon.textContent = '🌙';
+                text.textContent = 'מצב כהה';
+            }
+        }
+
+        // Initialize theme on load
+        initTheme();
+
+        // ============================================
+        // Wait for Firebase to initialize
+        // ============================================
+        window.addEventListener('load', () => {
+            setTimeout(initializeApp, 500);
+        });
+
+        // ============================================
+        // Initialize App
+        // ============================================
+        function initializeApp() {
+            if (!window.firebaseAuth) {
+                console.error('Firebase not loaded yet');
+                setTimeout(initializeApp, 500);
+                return;
+            }
+
+            window.onAuthStateChanged(window.firebaseAuth, user => {
+                if (user) {
+                    currentUser = user;
+                    showMainApp();
+                } else {
+                    showLoginScreen();
+                }
+            });
+        }
+
+        // ============================================
+        // Screen Navigation
+        // ============================================
+        function showLoginScreen() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('signupScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            clearAuthMessages();
+        }
+
+        function showSignupScreen() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('signupScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            clearAuthMessages();
+        }
+
+        async function showMainApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('signupScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            document.getElementById('userEmailDisplay').textContent = currentUser.email;
+            
+            // Load user's months
+            await loadUserMonths();
+            
+            // Set today's date
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            document.getElementById('date').value = `${dd}/${mm}/${yyyy}`;
+            
+            // Restore saved hourly rate
+            if (savedHourlyRate) {
+                document.getElementById('hourlyRate').value = savedHourlyRate;
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+        }
+
+        function clearAuthMessages() {
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginSuccess').classList.add('hidden');
+            document.getElementById('signupError').classList.add('hidden');
+            document.getElementById('signupSuccess').classList.add('hidden');
+        }
+
+        // ============================================
+        // Month Management
+        // ============================================
+        async function loadUserMonths() {
+            try {
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthsCol = window.firestoreCollection(userDoc, 'months');
+                const snapshot = await window.firestoreGetDocs(monthsCol);
+                
+                userMonths = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                userMonths.sort((a, b) => a.id.localeCompare(b.id));
+                
+                populateMonthSelector();
+            } catch (error) {
+                console.error('Error loading months:', error);
+            }
+        }
+
+        function populateMonthSelector() {
+            const select = document.getElementById('monthSelect');
+            select.innerHTML = '';
+            
+            if (userMonths.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'אין חודשים - לחץ "הוסף חודש"';
+                select.appendChild(option);
+                return;
+            }
+            
+            const monthNames = [
+                'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+            ];
+            
+            userMonths.forEach(month => {
+                const [year, monthNum] = month.id.split('-');
+                const monthIndex = parseInt(monthNum) - 1;
+                
+                const option = document.createElement('option');
+                option.value = month.id;
+                option.textContent = `${monthNames[monthIndex]} ${year}`;
+                select.appendChild(option);
+            });
+            
+            const now = new Date();
+            const currentMonthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            if (userMonths.find(m => m.id === currentMonthId)) {
+                select.value = currentMonthId;
+            } else {
+                select.value = userMonths[userMonths.length - 1].id;
+            }
+            
+            displayShifts();
+        }
+
+        function showAddMonthModal() {
+            document.getElementById('addMonthModal').classList.remove('hidden');
+            populateMonthGrid();
+        }
+
+        function closeAddMonthModal() {
+            document.getElementById('addMonthModal').classList.add('hidden');
+        }
+
+        function populateMonthGrid() {
+            const grid = document.getElementById('monthGrid');
+            grid.innerHTML = '';
+            
+            const monthNames = [
+                'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+            ];
+            
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            for (let i = 0; i < 12; i++) {
+                const date = new Date(currentYear, currentMonth + i, 1);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const monthId = `${year}-${String(month + 1).padStart(2, '0')}`;
+                
+                const exists = userMonths.find(m => m.id === monthId);
+                
+                const card = document.createElement('div');
+                card.className = `month-card ${exists ? 'disabled' : ''}`;
+                
+                if (!exists) {
+                    card.onclick = () => createMonth(monthId, `${monthNames[month]} ${year}`);
+                }
+                
+                card.innerHTML = `
+                    <div class="month-name">${monthNames[month]}</div>
+                    <div class="month-year">${year}</div>
+                    ${exists ? '<div style="font-size: 0.75em; margin-top: 5px; opacity: 0.7;">קיים</div>' : ''}
+                `;
+                
+                grid.appendChild(card);
+            }
+        }
+
+        async function createMonth(monthId, monthName) {
+            try {
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthDoc = window.firestoreDoc(userDoc, 'months', monthId);
+                
+                await window.firestoreSetDoc(monthDoc, {
+                    createdAt: window.firestoreServerTimestamp(),
+                    name: monthName
+                });
+                
+                closeAddMonthModal();
+                await loadUserMonths();
+                
+                document.getElementById('monthSelect').value = monthId;
+                displayShifts();
+                
+            } catch (error) {
+                console.error('Error creating month:', error);
+                alert('שגיאה ביצירת החודש');
+            }
+        }
+
+        // ============================================
+        // Authentication Functions
+        // ============================================
+        async function loginUser() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'נא למלא אימייל וסיסמה';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                await window.firebaseSignIn(window.firebaseAuth, email, password);
+                errorDiv.classList.add('hidden');
+            } catch (error) {
+                console.error('Login error:', error);
+                let errorMessage = 'שגיאה בהתחברות. ';
+                
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage += 'משתמש לא קיים. נסה להירשם תחילה.';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage += 'סיסמה שגויה.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage += 'אימייל לא תקין.';
+                } else if (error.code === 'auth/invalid-credential') {
+                    errorMessage += 'אימייל או סיסמה שגויים.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                errorDiv.textContent = errorMessage;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function signupUser() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+            const errorDiv = document.getElementById('signupError');
+            const successDiv = document.getElementById('signupSuccess');
+            
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            
+            if (!email || !password || !passwordConfirm) {
+                errorDiv.textContent = 'נא למלא את כל השדות';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = 'הסיסמאות לא תואמות';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            if (password.length < 6) {
+                errorDiv.textContent = 'הסיסמה חייבת להכיל לפחות 6 תווים';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                await window.firebaseSignUp(window.firebaseAuth, email, password);
+                
+                successDiv.textContent = '✅ החשבון נוצר בהצלחה! מעביר אותך למחשבון...';
+                successDiv.classList.remove('hidden');
+                
+                document.getElementById('signupEmail').value = '';
+                document.getElementById('signupPassword').value = '';
+                document.getElementById('signupPasswordConfirm').value = '';
+                
+            } catch (error) {
+                console.error('Signup error:', error);
+                let errorMessage = 'שגיאה ביצירת החשבון. ';
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage += 'האימייל כבר קיים במערכת. נסה להתחבר.';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage += 'אימייל לא תקין.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage += 'הסיסמה חלשה מדי. השתמש בסיסמה חזקה יותר.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                errorDiv.textContent = errorMessage;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        async function logoutUser() {
+            if (confirm('האם אתה בטוח שברצונך להתנתק?')) {
+                await window.firebaseSignOut(window.firebaseAuth);
+            }
+        }
+
+        // ============================================
+        // Helper Functions
+        // ============================================
+        function getCurrentMonth() {
+            return document.getElementById('monthSelect').value;
+        }
+
+        function calculateHours(start, end) {
+            const [startHour, startMin] = start.split(':').map(Number);
+            const [endHour, endMin] = end.split(':').map(Number);
+            
+            let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+            
+            if (totalMinutes < 0) {
+                totalMinutes += 24 * 60;
+            }
+            
+            return (totalMinutes / 60).toFixed(2);
+        }
+
+        function validateDate(dateStr) {
+            const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dateStr.match(dateRegex);
+            
+            if (!match) return null;
+            
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+            
+            if (month < 1 || month > 12) return null;
+            if (day < 1 || day > 31) return null;
+            if (year < 1900 || year > 2100) return null;
+            
+            const date = new Date(year, month - 1, day);
+            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                return null;
+            }
+            
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        // ============================================
+        // Data Management Functions
+        // ============================================
+        async function addShift() {
+            const currentMonth = getCurrentMonth();
+            
+            if (!currentMonth) {
+                alert('נא לבחור חודש או להוסיף חודש חדש');
+                return;
+            }
+            
+            const dateInput = document.getElementById('date').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+
+            if (!dateInput || !startTime || !endTime) {
+                alert('נא למלא את כל השדות!');
+                return;
+            }
+
+            const date = validateDate(dateInput);
+            if (!date) {
+                alert('נא להזין תאריך בפורמט תקין DD/MM/YYYY');
+                return;
+            }
+
+            const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+            if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+                alert('נא להזין שעה בפורמט תקין (לדוגמה: 15:30)');
+                return;
+            }
+
+            // Save hourly rate for future use
+            if (hourlyRate > 0) {
+                savedHourlyRate = hourlyRate.toString();
+                localStorage.setItem('hourlyRate', savedHourlyRate);
+            }
+
+            const hours = calculateHours(startTime, endTime);
+            const income = (parseFloat(hours) * hourlyRate).toFixed(2);
+
+            const shift = {
+                date,
+                dateDisplay: dateInput,
+                startTime,
+                endTime,
+                hours: parseFloat(hours),
+                hourlyRate,
+                income: parseFloat(income),
+                timestamp: window.firestoreServerTimestamp()
+            };
+
+            try {
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthDoc = window.firestoreDoc(userDoc, 'shifts', currentMonth);
+                const entriesCol = window.firestoreCollection(monthDoc, 'entries');
+                
+                await window.firestoreAddDoc(entriesCol, shift);
+                
+                displayShifts();
+                // Don't clear hourly rate anymore - it's saved
+            } catch (error) {
+                console.error('Error adding shift:', error);
+                alert('שגיאה בשמירת המשמרת: ' + error.message);
+            }
+        }
+
+        async function deleteShift(shiftId) {
+            if (!confirm('האם למחוק משמרת זו?')) return;
+            
+            try {
+                const currentMonth = getCurrentMonth();
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthDoc = window.firestoreDoc(userDoc, 'shifts', currentMonth);
+                const shiftDoc = window.firestoreDoc(monthDoc, 'entries', shiftId);
+                
+                await window.firestoreDeleteDoc(shiftDoc);
+                
+                displayShifts();
+            } catch (error) {
+                console.error('Error deleting shift:', error);
+                alert('שגיאה במחיקת המשמרת');
+            }
+        }
+
+        async function clearMonth() {
+            const currentMonth = getCurrentMonth();
+            
+            if (!currentMonth) {
+                alert('נא לבחור חודש');
+                return;
+            }
+            
+            if (!confirm('האם למחוק את כל המשמרות של החודש?')) return;
+            
+            try {
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthDoc = window.firestoreDoc(userDoc, 'shifts', currentMonth);
+                const entriesCol = window.firestoreCollection(monthDoc, 'entries');
+                
+                const q = window.firestoreQuery(entriesCol);
+                const snapshot = await window.firestoreGetDocs(q);
+                
+                const batch = window.firestoreWriteBatch(window.firebaseDb);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                displayShifts();
+            } catch (error) {
+                console.error('Error clearing month:', error);
+                alert('שגיאה במחיקת החודש');
+            }
+        }
+
+        async function displayShifts() {
+            const currentMonth = getCurrentMonth();
+            const tbody = document.getElementById('shiftsBody');
+            
+            if (!currentMonth) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">בחר חודש או הוסף חודש חדש</td></tr>';
+                updateSummary(0, 0, 0);
+                return;
+            }
+            
+            tbody.innerHTML = '<tr><td colspan="7" class="loading">טוען נתונים...</td></tr>';
+            
+            try {
+                const userDoc = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+                const monthDoc = window.firestoreDoc(userDoc, 'shifts', currentMonth);
+                const entriesCol = window.firestoreCollection(monthDoc, 'entries');
+                
+                const q = window.firestoreQuery(entriesCol, window.firestoreOrderBy('date', 'asc'));
+                const snapshot = await window.firestoreGetDocs(q);
+                
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="no-data">אין משמרות לחודש זה</td></tr>';
+                    updateSummary(0, 0, 0);
+                    return;
+                }
+                
+                let totalHours = 0;
+                let totalIncome = 0;
+                
+                const rows = snapshot.docs.map(doc => {
+                    const shift = doc.data();
+                    totalHours += parseFloat(shift.hours);
+                    totalIncome += parseFloat(shift.income);
+                    
+                    return `
+                        <tr>
+                            <td>${shift.dateDisplay}</td>
+                            <td>${shift.startTime}</td>
+                            <td>${shift.endTime}</td>
+                            <td>${shift.hours.toFixed(2)}</td>
+                            <td>₪${parseFloat(shift.hourlyRate).toFixed(2)}</td>
+                            <td>₪${shift.income.toFixed(2)}</td>
+                            <td><button class="delete-btn" onclick="deleteShift('${doc.id}')">מחק</button></td>
+                        </tr>
+                    `;
+                });
+                
+                tbody.innerHTML = rows.join('');
+                updateSummary(totalHours, snapshot.size, totalIncome);
+                
+            } catch (error) {
+                console.error('Error loading shifts:', error);
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">שגיאה בטעינת הנתונים: ${error.message}</td></tr>`;
+            }
+        }
+
+        function updateSummary(hours, shifts, income) {
+            document.getElementById('totalHours').textContent = hours.toFixed(2);
+            document.getElementById('totalShifts').textContent = shifts;
+            document.getElementById('totalIncome').textContent = `₪${income.toFixed(2)}`;
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        function setupEventListeners() {
+            document.getElementById('monthSelect').addEventListener('change', displayShifts);
+
+            document.getElementById('date').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2);
+                if (value.length >= 5) value = value.slice(0, 5) + '/' + value.slice(5, 9);
+                e.target.value = value;
+            });
+
+            ['startTime', 'endTime'].forEach(id => {
+                document.getElementById(id).addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length >= 2) value = value.slice(0, 2) + ':' + value.slice(2, 4);
+                    e.target.value = value;
+                });
+            });
+
+            // Save hourly rate when changed
+            document.getElementById('hourlyRate').addEventListener('change', function(e) {
+                const value = e.target.value;
+                if (value && parseFloat(value) > 0) {
+                    savedHourlyRate = value;
+                    localStorage.setItem('hourlyRate', value);
+                }
+            });
+
+            ['loginEmail', 'loginPassword'].forEach(id => {
+                document.getElementById(id).addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') loginUser();
+                });
+            });
+
+            ['signupEmail', 'signupPassword', 'signupPasswordConfirm'].forEach(id => {
+                document.getElementById(id).addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') signupUser();
+                });
+            });
+        }
+    </script>
+</body>
+</html>
