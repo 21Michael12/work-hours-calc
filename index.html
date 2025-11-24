@@ -155,6 +155,49 @@
             background: var(--bg-secondary);
             border-radius: 12px;
             box-shadow: 0 4px 6px var(--shadow);
+            position: relative;
+        }
+
+        .auth-theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        .auth-theme-toggle .theme-toggle-btn {
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .auth-theme-toggle .theme-toggle-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+
+        .auth-theme-toggle .theme-toggle-btn:active {
+            transform: scale(0.95) rotate(-15deg);
+        }
+
+        .auth-theme-toggle .theme-toggle-btn span {
+            font-size: 22px;
+            transition: transform 0.3s ease;
+        }
+
+        .auth-theme-toggle .theme-toggle-btn:hover span {
+            transform: rotate(-15deg);
         }
 
         .auth-screen h2 {
@@ -330,20 +373,24 @@
         }
 
         .btn-add-month {
-            padding: 10px 18px;
+            padding: 4px 10px;
             background: var(--success);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .btn-add-month:hover {
             background: #157347;
+            transform: translateY(-1px);
         }
 
         /* Modal */
@@ -518,10 +565,70 @@
 
         /* Table */
         .shifts-table {
-            overflow-x: auto;
             margin-bottom: 24px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .collapse-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 6px;
+            background: transparent;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            font-weight: 400;
+            vertical-align: middle;
+        }
+
+        .collapse-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .collapse-btn #collapseIcon {
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1;
+        }
+
+        .collapse-btn #collapseText {
+            line-height: 1;
+        }
+
+        .table-content {
+            overflow-x: auto;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .table-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
         }
 
         table {
@@ -620,6 +727,24 @@
             display: none !important;
         }
 
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -653,6 +778,11 @@
     <!-- Login Screen -->
     <div id="loginScreen" class="hidden">
         <div class="auth-screen">
+            <div class="auth-theme-toggle">
+                <button class="theme-toggle-btn" onclick="toggleTheme()">
+                    <span id="loginThemeIcon">🌙</span>
+                </button>
+            </div>
             <h2>🔐 כניסה למחשבון</h2>
             <div id="loginError" class="error-message hidden"></div>
             <div id="loginSuccess" class="success-message hidden"></div>
@@ -670,6 +800,11 @@
     <!-- Signup Screen -->
     <div id="signupScreen" class="hidden">
         <div class="auth-screen">
+            <div class="auth-theme-toggle">
+                <button class="theme-toggle-btn" onclick="toggleTheme()">
+                    <span id="signupThemeIcon">🌙</span>
+                </button>
+            </div>
             <h2>📝 הרשמה למחשבון</h2>
             <div id="signupError" class="error-message hidden"></div>
             <div id="signupSuccess" class="success-message hidden"></div>
@@ -748,24 +883,33 @@
         </div>
 
         <div class="shifts-table">
-            <table id="shiftsTable">
-                <thead>
-                    <tr>
-                        <th>תאריך</th>
-                        <th>שעת התחלה</th>
-                        <th>שעת סיום</th>
-                        <th>שעות עבודה</th>
-                        <th>שכר לשעה</th>
-                        <th>סה"כ הכנסה</th>
-                        <th>פעולות</th>
-                    </tr>
-                </thead>
-                <tbody id="shiftsBody">
-                    <tr>
-                        <td colspan="7" class="loading">בחר חודש או הוסף חודש חדש</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-header">
+                <h3>מעקב משמרות</h3>
+                <button class="collapse-btn" onclick="toggleTableCollapse()" id="collapseBtn">
+                    <span id="collapseIcon">−</span>
+                    <span id="collapseText">מזער</span>
+                </button>
+            </div>
+            <div id="tableContent" class="table-content">
+                <table id="shiftsTable">
+                    <thead>
+                        <tr>
+                            <th>תאריך</th>
+                            <th>שעת התחלה</th>
+                            <th>שעת סיום</th>
+                            <th>שעות עבודה</th>
+                            <th>שכר לשעה</th>
+                            <th>סה"כ הכנסה</th>
+                            <th>פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftsBody">
+                        <tr>
+                            <td colspan="7" class="loading">בחר חודש או הוסף חודש חדש</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="summary">
@@ -805,6 +949,15 @@
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             
+            // Add animation class to all theme buttons
+            const allThemeButtons = document.querySelectorAll('.theme-toggle-btn');
+            allThemeButtons.forEach(btn => {
+                btn.style.animation = 'spin 0.5s ease-in-out';
+                setTimeout(() => {
+                    btn.style.animation = '';
+                }, 500);
+            });
+            
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateThemeButton(newTheme);
@@ -813,13 +966,54 @@
         function updateThemeButton(theme) {
             const icon = document.getElementById('themeIcon');
             const text = document.getElementById('themeText');
+            const loginIcon = document.getElementById('loginThemeIcon');
+            const signupIcon = document.getElementById('signupThemeIcon');
             
-            if (theme === 'dark') {
-                icon.textContent = '☀️';
-                text.textContent = 'מצב בהיר';
+            const newIcon = theme === 'dark' ? '☀️' : '🌙';
+            const newText = theme === 'dark' ? 'מצב בהיר' : 'מצב כהה';
+            
+            if (icon) {
+                icon.textContent = newIcon;
+            }
+            if (text) {
+                text.textContent = newText;
+            }
+            if (loginIcon) {
+                loginIcon.textContent = newIcon;
+            }
+            if (signupIcon) {
+                signupIcon.textContent = newIcon;
+            }
+        }
+
+        // ============================================
+        // Table Collapse Management
+        // ============================================
+        function toggleTableCollapse() {
+            const tableContent = document.getElementById('tableContent');
+            const collapseIcon = document.getElementById('collapseIcon');
+            const collapseText = document.getElementById('collapseText');
+            const isCollapsed = tableContent.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                tableContent.classList.remove('collapsed');
+                collapseIcon.textContent = '−';
+                collapseText.textContent = 'מזער';
+                localStorage.setItem('tableCollapsed', 'false');
             } else {
-                icon.textContent = '🌙';
-                text.textContent = 'מצב כהה';
+                tableContent.classList.add('collapsed');
+                collapseIcon.textContent = '+';
+                collapseText.textContent = 'הרחב';
+                localStorage.setItem('tableCollapsed', 'true');
+            }
+        }
+
+        function initTableState() {
+            const isCollapsed = localStorage.getItem('tableCollapsed') === 'true';
+            if (isCollapsed) {
+                document.getElementById('tableContent').classList.add('collapsed');
+                document.getElementById('collapseIcon').textContent = '+';
+                document.getElementById('collapseText').textContent = 'הרחב';
             }
         }
 
@@ -876,6 +1070,9 @@
             document.getElementById('mainApp').classList.remove('hidden');
             
             document.getElementById('userEmailDisplay').textContent = currentUser.email;
+            
+            // Initialize table collapse state
+            initTableState();
             
             // Load user's months
             await loadUserMonths();
